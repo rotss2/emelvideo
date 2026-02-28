@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scenery Video Dashboard</title>
+<style>
+  :root{
+    --bg:#0a0f1f;
+    --panel:#0f1730;
+    --line:rgba(255,255,255,.10);
+    --text:rgba(245,248,255,.95);
+    --muted:rgba(200,210,255,.65);
+    --btn:#121c3b;
+    --btnHover:#172651;
+    --accent:#22c55e;
+    --danger:#ef4444;
+    --r:18px;
+    --shadow:0 18px 55px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:
+      radial-gradient(900px 600px at 10% 10%, rgba(34,197,94,.14), transparent 55%),
+      radial-gradient(900px 650px at 90% 15%, rgba(59,130,246,.14), transparent 55%),
+      linear-gradient(180deg, #050815, var(--bg));
+    color:var(--text);
+    min-height:100vh;
+  }
+
+  .app{
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px;
+    padding-bottom: 120px; /* space for bottom remote */
+  }
+
+  .top{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    border:1px solid var(--line);
+    border-radius: var(--r);
+    background: rgba(255,255,255,.05);
+    box-shadow: var(--shadow);
+  }
+  .top b{font-size:15px}
+  .top span{display:block; font-size:12px; color:var(--muted); margin-top:4px}
+
+  .stats{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  .pill{
+    padding:7px 10px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.22);
+    border-radius: 999px;
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .pill strong{color:var(--text); font-weight:800}
+
+  .stage{
+    margin-top:14px;
+    border:1px solid var(--line);
+    border-radius: var(--r);
+    background: rgba(255,255,255,.04);
+    overflow:hidden;
+    box-shadow: var(--shadow);
+  }
+  .frame{
+    background:#000;
+  }
+
+  /* ✅ lock the video (no tapping/pausing by user) */
+  video{
+    width:100%;
+    display:block;
+    pointer-events:none;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+  }
+
+  /* Bottom Remote */
+  .remoteBar{
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px 14px;
+    background: rgba(10,15,31,.88);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255,255,255,.10);
+  }
+  .remote{
+    max-width: 1100px;
+    margin: 0 auto;
+    border:1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(255,255,255,.05);
+    box-shadow: var(--shadow);
+    padding: 10px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+  }
+
+  .btns{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  button{
+    border:1px solid rgba(255,255,255,.10);
+    background: var(--btn);
+    color: var(--text);
+    cursor:pointer;
+    padding:10px 12px;
+    border-radius: 14px;
+    font-size:13px;
+    font-weight:800;
+    transition:.14s ease;
+  }
+  button:hover{ background: var(--btnHover); transform: translateY(-1px); }
+  button.accent{ background: rgba(34,197,94,.92); border-color: rgba(34,197,94,.55); }
+  button.accent:hover{ background: rgba(34,197,94,1); }
+  button.danger{ background: rgba(239,68,68,.92); border-color: rgba(239,68,68,.55); }
+  button.danger:hover{ background: rgba(239,68,68,1); }
+
+  .miniInfo{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    color:var(--muted);
+    font-size:12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="top">
+    <div>
+      <b>Scenery Video Dashboard</b>
+      <span>One video only • controlled by bottom remote • video is locked</span>
+    </div>
+    <div class="stats">
+      <div class="pill" id="pIndex"><strong>1</strong> / 1</div>
+      <div class="pill" id="pState"><strong>Loading</strong></div>
+      <div class="pill" id="pSound"><strong>Muted</strong></div>
+      <div class="pill" id="pTime"><strong>0:00</strong> / 0:00</div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="frame">
+      <video id="player" autoplay muted playsinline preload="metadata"></video>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Remote -->
+<div class="remoteBar">
+  <div class="remote">
+    <div class="btns">
+      <button class="accent" id="playPause" type="button">Play</button>
+      <button class="danger" id="stop" type="button">Stop</button>
+      <button id="prev" type="button">Previous</button>
+      <button id="next" type="button">Next</button>
+      <button id="ff" type="button">Fast +10s</button>
+      <button id="mute" type="button">Unmute</button>
+    </div>
+
+    <div class="miniInfo">
+      <span class="pill" id="pTitle"><strong>—</strong></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ✅ SCENERY ONLY (STATIC)
+  // Best practice: use your own MP4 files for 100% reliability.
+  // Example:
+  // { title:"Scenery 1", src:"videos/scenery1.mp4" }
+
+  const playlist = [
+    { title: "Scenery — Flower Field", src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" }
+    // Add more scenery videos here (local is best):
+    // { title: "Scenery — Beach", src: "videos/beach.mp4" },
+    // { title: "Scenery — Mountains", src: "videos/mountains.mp4" },
+  ];
+
+  const player = document.getElementById("player");
+
+  const pIndex = document.getElementById("pIndex");
+  const pState = document.getElementById("pState");
+  const pSound = document.getElementById("pSound");
+  const pTime  = document.getElementById("pTime");
+  const pTitle = document.getElementById("pTitle");
+
+  const playPauseBtn = document.getElementById("playPause");
+  const stopBtn = document.getElementById("stop");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const ffBtn = document.getElementById("ff");
+  const muteBtn = document.getElementById("mute");
+
+  let index = 0;
+  let pendingAutoPlay = false;
+
+  function fmt(t){
+    if(!isFinite(t)) return "0:00";
+    const m = Math.floor(t/60);
+    const s = Math.floor(t%60).toString().padStart(2,"0");
+    return `${m}:${s}`;
+  }
+
+  function updateUI(){
+    pIndex.innerHTML = `<strong>${index+1}</strong> / ${playlist.length}`;
+    pTitle.innerHTML = `<strong>${playlist[index]?.title ?? "—"}</strong>`;
+    pState.innerHTML = `<strong>${player.paused ? "Paused" : "Playing"}</strong>`;
+    pSound.innerHTML = `<strong>${player.muted ? "Muted" : "Unmuted"}</strong>`;
+    muteBtn.textContent = player.muted ? "Unmute" : "Mute";
+    playPauseBtn.textContent = player.paused ? "Play" : "Pause";
+    pTime.innerHTML = `<strong>${fmt(player.currentTime)}</strong> / ${fmt(player.duration)}`;
+  }
+
+  async function forcePlay(){
+    // Try to play; if blocked by browser, user can press Play (remote).
+    try{
+      await player.play();
+    }catch(e){
+      // If autoplay blocked, keep paused but UI will show.
+    }
+    updateUI();
+  }
+
+  function loadVideo(i){
+    index = (i + playlist.length) % playlist.length;
+
+    // Always keep autoplay working on mobile: muted is safest
+    player.muted = true;
+    pendingAutoPlay = true;
+
+    player.pause();
+    player.currentTime = 0;
+    player.src = playlist[index].src;
+    player.load();
+
+    updateUI();
+  }
+
+  // ✅ FIX for "Next not playing":
+  // When the new video becomes playable, we force play.
+  player.addEventListener("canplay", () => {
+    if(pendingAutoPlay){
+      pendingAutoPlay = false;
+      forcePlay();
+    }
+  });
+
+  playPauseBtn.addEventListener("click", async ()=>{
+    if(player.paused){
+      await forcePlay();
+    }else{
+      player.pause();
+      updateUI();
+    }
+  });
+
+  stopBtn.addEventListener("click", ()=>{
+    player.pause();
+    player.currentTime = 0;
+    updateUI();
+  });
+
+  nextBtn.addEventListener("click", ()=> loadVideo(index + 1));
+  prevBtn.addEventListener("click", ()=> loadVideo(index - 1));
+
+  ffBtn.addEventListener("click", ()=>{
+    player.currentTime = Math.min(player.currentTime + 10, player.duration || player.currentTime + 10);
+    updateUI();
+  });
+
+  muteBtn.addEventListener("click", ()=>{
+    player.muted = !player.muted;
+    updateUI();
+  });
+
+  player.addEventListener("timeupdate", updateUI);
+  player.addEventListener("loadedmetadata", updateUI);
+  player.addEventListener("play", updateUI);
+  player.addEventListener("pause", updateUI);
+  player.addEventListener("volumechange", updateUI);
+  player.addEventListener("error", ()=>{
+    pState.innerHTML = `<strong>Error loading video</strong>`;
+  });
+
+  // Start
+  loadVideo(0);
+</script>
+
+</body>
+</html>
